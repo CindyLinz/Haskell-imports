@@ -114,18 +114,18 @@ importsContentWith
   :: Predictor
   -> String -- ^ import alias
   -> [(String, FilePath)] -- ^ \[(prefix, search root)\]
-  -> IO String -- ^ \"import qualified A as Alias\\n..\"
+  -> IO String -- ^ \"import A as Alias\\n..\"
 importsContentWith p alias sources = execWriterT $ do
   forM_ sources $ \(prefix', root) -> do
     let prefix = if null prefix' then "" else prefix' ++ "."
     imports <- lift $ searchImportsWith p root
     forM_ imports $ \im -> do
-      tell $ "import qualified " ++ prefix ++ im ++ " as " ++ alias ++ "\n"
+      tell $ "import " ++ prefix ++ im ++ " as " ++ alias ++ "\n"
 
 importsContent
   :: String -- ^ import alias
   -> [(String, FilePath)] -- ^ \[(prefix, search root)\]
-  -> IO String -- ^ \"import qualified A as Alias\\n..\"
+  -> IO String -- ^ \"import A as Alias\\n..\"
 importsContent = importsContentWith defaultPred
 
 writeMultiImportsHeaderWith
