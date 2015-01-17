@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                imports
-version:             0.1.0.0
+version:             0.1.2.0
 synopsis:            Generate code for importing directories automatically
 description:
   This module helps to automatically generate code for importing all the haskell files from directories.

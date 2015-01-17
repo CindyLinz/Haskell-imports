@@ -50,7 +50,22 @@ For <https://www.haskell.org/cabal/ cabal> inited project, we customize @Setup.h
       func = ImportAll.funcFromSomeWhere
       @
 -}
-module System.Imports where
+module System.Imports
+  ( Predictor
+  , defaultPred
+  , searchImportsWith
+  , searchImports
+  , importsContentWith
+  , importsContent
+  , writeMultiImportsHeaderWith
+  , writeMultiImportsHeader
+  , writeImportsHeaderWith
+  , writeImportsHeader
+  , writeMultiImportsModuleWith
+  , writeMultiImportsModule
+  , writeImportsModuleWith
+  , writeImportsModule
+  ) where
 
 import System.Directory
 import System.FilePath
@@ -88,6 +103,11 @@ pathToModule path = go $ dropExtensions path where
   go (a:as)
     | isPathSeparator a = '.' : go as
     | otherwise = a : go as
+
+patchFile :: FilePath -> String -> IO ()
+patchFile path content = do
+  oriContent <- readFile path
+  when (oriContent == "" || oriContent /= content) (writeFile path content)
 
 searchImportsWith
   :: Predictor
@@ -144,7 +164,7 @@ writeMultiImportsHeaderWith
   -> IO ()
 writeMultiImportsHeaderWith p headerPath alias sources = do
   headerContent <- importsContentWith p alias sources
-  writeFile headerPath headerContent
+  patchFile headerPath headerContent
 
 writeMultiImportsHeader
   :: FilePath -- ^ import header file to write
@@ -178,7 +198,7 @@ writeMultiImportsModuleWith
   -> IO ()
 writeMultiImportsModuleWith p modulePath moduleName sources = do
   headerContent <- importsContentWith p "Export" sources
-  writeFile modulePath $ "module " ++ moduleName ++ " (module Export) where\n" ++ headerContent
+  patchFile modulePath $ "module " ++ moduleName ++ " (module Export) where\n" ++ headerContent
 
 writeMultiImportsModule
   :: FilePath -- ^ module file to write
