@@ -76,6 +76,7 @@ defaultPred path =
       when (ext == ".hs" || ext == ".lhs") (throwError ())
       return ()
 
+-- | \"Abc\/Def\/Ghi.hs\" -> \"Abc.Def.Ghi\"
 pathToModule :: FilePath -> String
 pathToModule path = go $ dropExtensions path where
   go [] = []
@@ -116,7 +117,7 @@ importsContentWith
   :: Predictor
   -> String -- ^ import alias
   -> [(String, FilePath)] -- ^ \[(prefix, search root)\]
-  -> IO String
+  -> IO String -- ^ \"import qualified A as Alias\\n..\"
 importsContentWith p alias sources = execWriterT $ do
   forM_ sources $ \(prefix', root) -> do
     let prefix = if null prefix' then "" else prefix' ++ "."
@@ -127,7 +128,7 @@ importsContentWith p alias sources = execWriterT $ do
 importsContent
   :: String -- ^ import alias
   -> [(String, FilePath)] -- ^ \[(prefix, search root)\]
-  -> IO String
+  -> IO String -- ^ \"import qualified A as Alias\\n..\"
 importsContent = importsContentWith defaultPred
 
 writeMultiImportsHeaderWith
