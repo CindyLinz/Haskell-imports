@@ -73,7 +73,7 @@ importsContentWith p alias sources = execWriterT $ do
     let prefix = if null prefix' then "" else prefix' ++ "."
     imports <- lift $ searchImportsWith p root
     forM_ imports $ \im -> do
-      tell $ "import qualified " ++ prefix ++ im ++ " as " ++ alias ++ "\n"
+      tell $ "import " ++ prefix ++ im ++ " as " ++ alias ++ "\n"
 
 importsContent
   :: String -- ^ import alias
@@ -114,3 +114,38 @@ writeImportsHeader
   -> FilePath -- ^ path to the search root
   -> IO ()
 writeImportsHeader = writeImportsHeaderWith defaultPred
+
+writeMultiImportsModuleWith
+  :: Predictor
+  -> String -- ^ module name
+  -> FilePath -- ^ module file to write
+  -> [(String, FilePath)] -- ^ [(module name prefix, path to the search root)]
+  -> IO ()
+writeMultiImportsModuleWith p moduleName modulePath sources = do
+  headerContent <- importsContentWith p "Export" sources
+  writeFile modulePath $ "module " ++ moduleName ++ " (module Export) where\n" ++ headerContent
+
+writeMultiImportsModule
+  :: String -- ^ module name
+  -> FilePath -- ^ module file to write
+  -> [(String, FilePath)] -- ^ [(module name prefix, path to the search root)]
+  -> IO ()
+writeMultiImportsModule = writeMultiImportsModuleWith defaultPred
+
+writeImportsModuleWith
+  :: Predictor
+  -> String -- ^ module name
+  -> FilePath -- ^ module file to write
+  -> String -- ^ module name prefix
+  -> FilePath -- ^ path to the search root
+  -> IO ()
+writeImportsModuleWith p moduleName modulePath prefix rootPath =
+  writeMultiImportsModuleWith p moduleName modulePath [(prefix, rootPath)]
+
+writeImportsModule
+  :: String -- ^ module name
+  -> FilePath -- ^ module file to write
+  -> String -- ^ module name prefix
+  -> FilePath -- ^ path to the search root
+  -> IO ()
+writeImportsModule = writeImportsModuleWith defaultPred
