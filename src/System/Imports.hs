@@ -3,47 +3,44 @@ This module helps to generate code for importing all the haskell files from dire
 
 = Synopsis
 
-There're primarily two ways to trigger the code generating process:
+For <https://www.haskell.org/cabal/ cabal> inited project, we customize @Setup.hs@ file to generate the importing code.
 
-  * For simple haskell project, we use <https://www.haskell.org/haskellwiki/Template_Haskell TemplateHaskell> to generate the importing code
-    while compiling the file.
+  * Be sure to modify the @build-type@ field in the @.cabal@ file from @Simple@ to @Custom@.
 
-    There're 2 approaches:
+  * Then modify the @main@ function in @Setup.hs@ to generate importing code by either header file or a module file.
 
-      * Writes the import header to a header file. And then we @#include@ the header (by @CPP@ extension) in.
+      Setup.hs:
 
-        @
-        {&#45;&#35; LANUGAGE TemplateHaskell, CPP &#35;&#45;}
-        module Foo where
+      > import Distribution.Simple
+      > import System.Imports (writeImportsHeader, writeImportsModule)
+      >
+      > main = do
+      >   writeImportsHeader "imports.header" "Export" "Some.Where" "Some/Where"
+      >   -- or
+      >   writeImportsModule "ImportAll.hs" "ImportAll" "Some.Where" "Some/Where"
+      >
+      >   defaultMain
 
-        import System.Import (writeImportsHeader)
+      Target.hs: (by header)
 
-        $(writeImportsHeader "imports.header" &#34;I&#34; &#34;Some.Where&#34; &#34;Some/Where&#34;)
-        #include "imports.header"
+      @
+      {\-\# LANGUAGE CPP \#-\}
+      module Target where
 
-        func = I.someFuncInSomeWhere
-        @
+      #include "imports.header"
 
-      * Or, create the whole module file.
+      func = Export.funcFromSomeWhere
+      @
 
-        @
-        {&#45;&#35; LANUGAGE TemplateHaskell &#35;&#45;}
-        module Foo where
+      Target.hs: (by module)
 
-        import System.Import (writeImportsModule)
-        $(writeImportsModule &#34;MyImport.hs&#34; &#34;MyImport&#34; &#34;Some.Where&#34; &#34;Some/Where&#34;)
+      @
+      module Target where
 
-        import qualified MyImport
+      import qualified ImportAll
 
-        func = MyImport.someFuncInSomeWhere
-        @
-
-  * For <https://www.haskell.org/cabal/ cabal> inited project, we customize @Setup.hs@ file to generate the importing code.
-
-    * Be sure to modify the @build-type@ field in the @.cabal@ file from @Simple@ to @Custom@.
-
-    * Then modify the @main@ function in @Setup.hs@ to generate importing code by either header file or a whole module file
-      explained above.
+      func = ImportAll.funcFromSomeWhere
+      @
 -}
 module System.Imports where
 
