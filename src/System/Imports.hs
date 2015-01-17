@@ -9,20 +9,23 @@ import Control.Monad.Writer
 import Control.Monad.Except
 
 import Data.Monoid
+import Data.Either
 
 type Predictor
-  = FilePath -- ^ paths from search root: "Bar/Ex/Ex2/Foo.hs" or "Bar/Ex/Ex2/" (paths to directory are ended with "/" on Posix or "\\" on Windows)
+  = FilePath -- ^ paths from search root: "Bar/Ex/Ex2/Foo.hs" or "Bar/Ex/Ex2" (you should determine the path is whether a file or a directory)
   -> IO Bool
 
 defaultPred :: Predictor
-defaultPred "" = return False
-defaultPred ('.':_) = return False
-defaultPred ('_':_) = return False
-defaultPred path
-  | isPathSeparator $ last path = return True
-  | takeExtension path == ".hs" = return True
-  | takeExtension path == ".lhs" = return True
-  | otherwise = return False
+defaultPred path =
+  case takeFileName path of
+    "" -> return False
+    ('.':_) -> return False
+    ('_':_) -> return False
+    filename -> liftM isLeft . runExceptT $ do
+      lift (doesDirectoryExist path) >>= flip when (throwError ())
+      let ext = takeExtension filename
+      when (ext == ".hs" || ext == ".lhs") (throwError ())
+      return ()
 
 pathToModule :: FilePath -> String
 pathToModule path = go $ dropExtensions path where
@@ -35,37 +38,25 @@ searchImportsWith
   :: Predictor
   -> FilePath -- ^ path to the search root
   -> IO [String] -- ^ something like ["Foo", "Foo.Bar", "Foo.Bar2"], relative to the search root
-searchImportsWith p path
-  | let filename = takeFileName path, filename == "." || filename == ".."
-    = return []
-  | otherwise = execWriterT $ do
-  do
-    toDir <- (either (const $ return False) (const $ return True) =<<) . lift . runExceptT $ do
-      isDir <- lift $ doesDirectoryExist path
-      unless isDir (throwError ())
+searchImportsWith p rootPath = go "" where
+  go subPath = execWriterT $ do
+    let thisPath = rootPath </> subPath
 
-      wantDir <- lift $ p (path ++ "/")
-      unless wantDir (throwError ())
+    entries <- lift $ getDirectoryContents thisPath
+    forM_ entries $ \entry -> do
+      let entryPath = thisPath </> entry
+      let subPath' = subPath </> entry
 
-      return ()
+      toDo <- lift . liftM isRight . runExceptT $ do
+        when (entry == "" || entry == "." || entry == "..") (throwError ())
+        flip unless (throwError ()) =<< lift (p entryPath)
+        return ()
 
-    when toDir $ do
-      entries <- lift $ getDirectoryContents path
-      forM_ entries $ \entry ->
-        tell =<< lift (searchImportsWith p (path ++ [pathSeparator]))
-
-  do
-    gotFile <- (either (const $ return False) (const $ return True) =<<) . lift . runExceptT $ do
-      isFile <- lift $ doesFileExist path
-      unless isFile (throwError ())
-
-      wantFile <- lift $ p path
-      unless wantFile (throwError ())
-
-      return ()
-
-    when gotFile $ do
-      tell [pathToModule path]
+      when toDo $ do
+        (lift (doesDirectoryExist entryPath) >>=) . flip when $ do
+          tell =<< lift (go subPath')
+        (lift (doesFileExist entryPath) >>=) . flip when $ do
+          tell [pathToModule subPath']
 
 searchImports
   :: FilePath -- ^ path to the search root
