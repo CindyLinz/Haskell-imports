@@ -1,5 +1,13 @@
 {- |
-This module helps to generate code for importing all the haskell files from directories.
+Module      : System.Imports
+Description : Generate code for importing directories automatically
+Copyright   : (C) 2015 Cindy Wang (CindyLinz)
+License     : MIT
+Maintainer  : Cindy Wang (CindyLinz) <cindylinz@gmail.com>
+Stability   : beta
+Portability : POSIX / Windows
+
+This module helps to automatically generate code for importing all the haskell files from directories.
 
 = Synopsis
 
