@@ -74,6 +74,7 @@ import System.IO
 import Control.Monad
 import Control.Monad.Writer
 import Control.Monad.Except
+import Control.Exception
 
 import Data.Monoid
 import Data.Either
@@ -106,8 +107,10 @@ pathToModule path = go $ dropExtensions path where
 
 patchFile :: FilePath -> String -> IO ()
 patchFile path content = do
-  oriContent <- readFile path
-  when (oriContent == "" || oriContent /= content) (writeFile path content)
+  oriContent <- flip catch ((\_ -> return Nothing) :: IOException -> IO (Maybe String)) $ do
+    cont <- readFile path
+    length cont `seq` return (Just cont)
+  when (oriContent /= Just content) (writeFile path content)
 
 searchImportsWith
   :: Predictor
